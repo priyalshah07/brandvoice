@@ -6,15 +6,17 @@ import { RefreshCw, Edit3, ArrowLeft, Sparkles } from "lucide-react";
 import Link from "next/link";
 import OutputCard from "@/components/OutputCard";
 import LoadingCard from "@/components/LoadingCard";
-import CriticReviserPanel from "@/components/CriticReviserPanel";
 import RefineAllButton from "@/components/RefineAllButton";
+import Toast from "@/components/Toast";
 import { useApp } from "@/lib/appContext";
+import { useToast } from "@/hooks/useToast";
 import { AUDIENCES, DEMO_OUTPUTS } from "@/lib/demoData";
-import { GeneratedOutput, AudienceId, CritiqueResult } from "@/types";
+import { GeneratedOutput, AudienceId } from "@/types";
 
 export default function OutputsPage() {
   const router = useRouter();
   const { onboarding, outputs, setOutputs, brandVoiceProfile } = useApp();
+  const { toast, showToast, dismissToast } = useToast();
   const [regeneratingAll, setRegeneratingAll] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refineAllLoading, setRefineAllLoading] = useState(false);
@@ -36,6 +38,10 @@ export default function OutputsPage() {
 
   const handleRefined = useCallback((audienceId: AudienceId, newContent: string) => {
     setLiveContent(prev => ({ ...prev, [audienceId]: newContent }));
+  }, []);
+
+  const handleContentChange = useCallback((audienceId: AudienceId, content: string) => {
+    setLiveContent(prev => ({ ...prev, [audienceId]: content }));
   }, []);
 
   const handleRegenerateAll = async () => {
@@ -76,7 +82,13 @@ export default function OutputsPage() {
           const res = await fetch("/api/agent/critique", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ output: content, audienceId: output.audienceId, milestone: onboarding.milestone, brandProfile: brandVoiceProfile, formatSpec: audience.format }),
+            body: JSON.stringify({
+              output: content,
+              audienceId: output.audienceId,
+              milestone: onboarding.milestone,
+              brandProfile: brandVoiceProfile,
+              formatSpec: audience.format,
+            }),
           });
           const data = await res.json();
           if (res.ok && data.result?.wasRevised) {
@@ -93,7 +105,6 @@ export default function OutputsPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#fafaf9]">
-      {/* Nav */}
       <nav className="flex items-center justify-between px-6 sm:px-10 py-4 bg-white border-b border-zinc-200 sticky top-0 z-20">
         <Link href="/" className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-md bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
@@ -116,18 +127,19 @@ export default function OutputsPage() {
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-zinc-200 bg-white text-sm font-medium text-zinc-600 hover:border-zinc-300 hover:text-zinc-900 transition-all disabled:opacity-40"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${regeneratingAll ? "animate-spin" : ""}`} />
-            {regeneratingAll ? "Regenerating…" : "Regenerate all"}
+            {regeneratingAll ? "Regenerating..." : "Regenerate all"}
           </button>
         </div>
       </nav>
 
       <div className="max-w-7xl mx-auto w-full px-6 sm:px-10 py-10">
-        {/* Demo banner */}
         {isDemo && (
           <div className="mb-8 p-4 rounded-2xl bg-gradient-to-r from-violet-50 to-indigo-50 border border-violet-200 flex items-center justify-between gap-4">
             <div>
               <p className="text-sm font-semibold text-violet-900">Viewing demo outputs</p>
-              <p className="text-xs text-violet-600 mt-0.5">Pre-generated for Meridian's $28M Series A. Click "Review & Refine (Demo)" on any card to see the Critic-Reviser in action.</p>
+              <p className="text-xs text-violet-600 mt-0.5">
+                Pre-generated for Meridian's $28M Series A. Click "Review &amp; Refine (Demo)" on any card to see the Critic-Reviser in action.
+              </p>
             </div>
             <button
               onClick={() => router.push("/onboarding")}
@@ -143,7 +155,6 @@ export default function OutputsPage() {
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl text-sm text-red-700">{error}</div>
         )}
 
-        {/* Milestone pill */}
         {!isDemo && onboarding.milestone && (
           <div className="mb-8 px-4 py-3 bg-white border border-zinc-200 rounded-2xl shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-widest text-zinc-400 mb-1">Announcement</p>
@@ -151,35 +162,26 @@ export default function OutputsPage() {
           </div>
         )}
 
-        {/* Output grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {regeneratingAll
             ? selectedAudiences.map(id => <LoadingCard key={id} label={AUDIENCES.find(a => a.id === id)!.label} />)
             : displayOutputs.filter(o => selectedAudiences.includes(o.audienceId)).map(output => (
-                <div key={output.audienceId} className="flex flex-col">
-                  {/* Output card */}
-                  <OutputCard
-                    output={{
-                      ...output,
-                      content: getContent(output.audienceId, output.content),
-                      wordCount: getContent(output.audienceId, output.content).trim().split(/\s+/).length,
-                    }}
-                    brandContent={onboarding.brandContent}
-                    milestone={onboarding.milestone}
-                    onRegenerate={handleRegenerate}
-                  />
-                  {/* Critic-Reviser panel stitched below */}
-                  <div className="bg-white border border-t-0 border-zinc-200 rounded-b-2xl px-5 pb-5 -mt-2 pt-2">
-                    <CriticReviserPanel
-                      audienceId={output.audienceId}
-                      output={getContent(output.audienceId, output.content)}
-                      milestone={onboarding.milestone || "Meridian closed a $28M Series A led by Benchmark."}
-                      brandProfile={brandVoiceProfile}
-                      isDemo={isDemo}
-                      onRefined={nc => handleRefined(output.audienceId, nc)}
-                    />
-                  </div>
-                </div>
+                <OutputCard
+                  key={output.audienceId}
+                  output={{
+                    ...output,
+                    content: getContent(output.audienceId, output.content),
+                    wordCount: getContent(output.audienceId, output.content).trim().split(/\s+/).length,
+                  }}
+                  brandContent={onboarding.brandContent}
+                  milestone={onboarding.milestone || "Meridian closed a $28M Series A led by Benchmark."}
+                  brandProfile={brandVoiceProfile}
+                  isDemo={isDemo}
+                  onRegenerate={handleRegenerate}
+                  onRefined={handleRefined}
+                  onContentChange={handleContentChange}
+                  onToast={showToast}
+                />
               ))}
         </div>
 
@@ -193,6 +195,8 @@ export default function OutputsPage() {
           </button>
         </div>
       </div>
+
+      {toast && <Toast toast={toast} onDismiss={dismissToast} />}
     </div>
   );
 }

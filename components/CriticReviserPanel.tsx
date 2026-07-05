@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Wand2, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
 import ScoreBadges from "./ScoreBadges";
 import BeforeAfterToggle from "./BeforeAfterToggle";
-import CopyButton from "./CopyButton";
 import { AudienceId, BrandVoiceProfile, CritiqueResult } from "@/types";
 import { AUDIENCES, DEMO_CRITIQUE_RESULTS } from "@/lib/demoData";
 
@@ -15,6 +14,10 @@ interface CriticReviserPanelProps {
   brandProfile: BrandVoiceProfile | null;
   isDemo?: boolean;
   onRefined?: (newContent: string) => void;
+  // Controlled view — OutputCard drives before/after so the textarea reflects it
+  view?: "before" | "after";
+  onViewChange?: (v: "before" | "after") => void;
+  onResult?: (result: CritiqueResult) => void;
 }
 
 type PanelStatus = "idle" | "critiquing" | "revising" | "done" | "error";
@@ -26,26 +29,36 @@ export default function CriticReviserPanel({
   brandProfile,
   isDemo = false,
   onRefined,
+  view: viewProp,
+  onViewChange,
+  onResult,
 }: CriticReviserPanelProps) {
   const [status, setStatus] = useState<PanelStatus>("idle");
   const [result, setResult] = useState<CritiqueResult | null>(null);
-  const [view, setView] = useState<"before" | "after">("after");
+  const [internalView, setInternalView] = useState<"before" | "after">("after");
   const [issuesOpen, setIssuesOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const audience = AUDIENCES.find(a => a.id === audienceId)!;
 
+  // Support controlled or uncontrolled view
+  const view = viewProp ?? internalView;
+  const setView = (v: "before" | "after") => {
+    setInternalView(v);
+    onViewChange?.(v);
+  };
+
   const handleRefine = async () => {
     setStatus("critiquing");
     setError(null);
 
-    // Demo simulation
     if (isDemo) {
       await new Promise(r => setTimeout(r, 900));
       setStatus("revising");
       await new Promise(r => setTimeout(r, 800));
       const demoResult = DEMO_CRITIQUE_RESULTS[audienceId];
       setResult(demoResult);
+      onResult?.(demoResult);
       setStatus("done");
       if (demoResult.wasRevised && onRefined) onRefined(demoResult.finalVersion);
       return;
@@ -64,13 +77,14 @@ export default function CriticReviserPanel({
         }),
       });
 
-      if (status !== "done") setStatus("revising"); // will flip quickly but shows the step
+      if (status !== "done") setStatus("revising");
 
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Critique failed");
 
       const r: CritiqueResult = data.result;
       setResult(r);
+      onResult?.(r);
       setStatus("done");
       if (r.wasRevised && onRefined) onRefined(r.finalVersion);
     } catch (err: unknown) {
@@ -79,7 +93,7 @@ export default function CriticReviserPanel({
     }
   };
 
-  // ── Idle state ──────────────────────────────────────────────
+  // ── Idle ─────────────────────────────────────────────────────
 
   if (status === "idle" || status === "error") {
     return (
@@ -104,7 +118,7 @@ export default function CriticReviserPanel({
     );
   }
 
-  // ── Loading state ───────────────────────────────────────────
+  // ── Loading ───────────────────────────────────────────────────
 
   if (status === "critiquing" || status === "revising") {
     return (
@@ -116,13 +130,13 @@ export default function CriticReviserPanel({
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
             </svg>
             <span className={status === "critiquing" ? "text-neutral-900 font-medium" : "text-neutral-400"}>
-              Step 1: Reviewing...
+              Step 1: Reviewing…
             </span>
           </div>
           <div className="flex items-center gap-2 text-sm text-neutral-400">
             <div className="w-3.5 h-3.5 shrink-0" />
             <span className={status === "revising" ? "text-neutral-900 font-medium" : ""}>
-              Step 2: Rewriting...
+              Step 2: Rewriting…
             </span>
           </div>
         </div>
@@ -130,13 +144,13 @@ export default function CriticReviserPanel({
     );
   }
 
-  // ── Done state ──────────────────────────────────────────────
+  // ── Done ──────────────────────────────────────────────────────
 
   if (status === "done" && result) {
-    const displayContent = view === "after" ? result.finalVersion : result.original;
-    const currentScores = view === "after" && result.iteration2Scores
-      ? result.iteration2Scores
-      : result.iteration1Scores;
+    const currentScores =
+      view === "after" && result.iteration2Scores
+        ? result.iteration2Scores
+        : result.iteration1Scores;
 
     return (
       <div className="pt-3 border-t border-neutral-100 space-y-4">
@@ -169,19 +183,12 @@ export default function CriticReviserPanel({
           </div>
         )}
 
-        {/* Content with optional before-highlights */}
-        <div className="text-sm text-neutral-700 leading-relaxed whitespace-pre-wrap bg-neutral-50 rounded-lg p-4 border border-neutral-100">
-          {view === "before" && result.issues.length > 0
-            ? highlightIssues(displayContent, result.issues)
-            : displayContent}
-        </div>
-
-        <CopyButton text={displayContent} />
+        {/* Note: content is shown in the card's textarea above, not here */}
 
         {/* Strengths */}
         {result.strengths.length > 0 && (
           <div className="space-y-1.5">
-            <p className="text-xs font-semibold uppercase tracking-wider text-neutral-400">What's working</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-neutral-400">What&apos;s working</p>
             {result.strengths.map((s, i) => (
               <p key={i} className="text-xs text-neutral-600 leading-relaxed">· {s}</p>
             ))}
@@ -210,14 +217,14 @@ export default function CriticReviserPanel({
                           issue.severity === "high"
                             ? "bg-red-50 text-red-600"
                             : issue.severity === "medium"
-                            ? "bg-amber-50 text-amber-600"
-                            : "bg-neutral-100 text-neutral-500"
+                              ? "bg-amber-50 text-amber-600"
+                              : "bg-neutral-100 text-neutral-500"
                         }`}
                       >
                         {issue.severity}
                       </span>
                     </div>
-                    <p className="text-xs text-neutral-600 italic">"{issue.callout}"</p>
+                    <p className="text-xs text-neutral-600 italic">&quot;{issue.callout}&quot;</p>
                     <p className="text-xs text-neutral-500">→ {issue.fix_direction}</p>
                   </div>
                 ))}
@@ -230,29 +237,4 @@ export default function CriticReviserPanel({
   }
 
   return null;
-}
-
-// Highlight called-out lines in the "before" view
-function highlightIssues(content: string, issues: import("@/types").Issue[]): React.ReactNode {
-  // Simple approach: wrap sentences that appear in callouts with a highlight span
-  const callouts = issues.map(i => i.callout.slice(1, -1).slice(0, 60)).filter(Boolean); // strip quotes, trim
-  const lines = content.split("\n");
-
-  return (
-    <>
-      {lines.map((line, i) => {
-        const shouldHighlight = callouts.some(c => line.toLowerCase().includes(c.toLowerCase().slice(0, 30)));
-        return (
-          <span key={i}>
-            {shouldHighlight ? (
-              <mark className="bg-amber-100 rounded px-0.5">{line}</mark>
-            ) : (
-              line
-            )}
-            {i < lines.length - 1 ? "\n" : ""}
-          </span>
-        );
-      })}
-    </>
-  );
 }
