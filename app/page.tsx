@@ -106,7 +106,7 @@ export default function HomePage() {
               <ArrowRight className="w-4 h-4" />
             </Link>
             <Link
-              href="/onboarding?demo=true"
+              href="/outputs"
               className="inline-flex items-center gap-1.5 px-5 py-3 rounded-xl text-sm font-medium text-zinc-300 border border-white/10 bg-white/5 hover:bg-white/10 hover:text-white transition-all backdrop-blur-sm"
             >
               See demo

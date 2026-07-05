@@ -1,77 +1,83 @@
 # BrandVoice
 
-Most growth-stage startups write one version of every announcement and hope it lands with everyone. It doesn't. BrandVoice takes a single company milestone and transforms it into five audience-specific content pieces — investor LinkedIn post, partner outreach email, Twitter/X thread for technical communities, talent recruiting copy, and a journalist pitch — all calibrated for the people who actually need to receive them.
+> **[Live demo →](https://brandvoice.vercel.app)** &nbsp;|&nbsp; Works without an API key &nbsp;|&nbsp; No account required
 
-BrandVoice now includes two AI agents on top of the generation pipeline: a **Brand Voice Agent** that autonomously builds a voice profile from your website, and a **Critic-Reviser Agent** that scores each output and rewrites weak sections before you publish.
+---
 
-## Why this matters
+By Series A, a startup needs to speak credibly to at least five distinct audiences — investors, partners, engineers, senior talent, and journalists — each of whom reads differently, filters for different signals, and will delete the wrong message in under 8 seconds. Most teams write one version of every announcement and hope it travels. It doesn't.
 
-By Series A, a startup needs to speak credibly to at least five distinct audiences — each of whom reads differently, values different signals, and filters for different credibility markers. The messaging that converts an investor is the exact wrong message for a journalist. The hook that excites a senior engineer is too inside-baseball for a VP of Partnerships. Most teams write one generic version and hope it travels. BrandVoice solves audience fragmentation at the source.
+**BrandVoice takes one milestone and produces five audience-specific content pieces in your brand's voice** — in the time it would take to write one draft.
 
-## How it works
+---
+
+## Two AI agents do the work
+
+### 1. Brand Voice Agent
+Point BrandVoice at your website URL. The agent autonomously builds a structured voice profile:
+
+1. Fetches the homepage and extracts all internal links
+2. Uses an LLM to classify and prioritize links — About, Blog, Press, Product pages ranked HIGH; Login, Contact ranked LOW
+3. Fetches up to 8 pages in parallel (no headless browser, plain `fetch`)
+4. Synthesizes a brand voice profile: tone descriptors, signature phrases, things the brand avoids, core values, and verbatim sentences for the RAG retrieval pipeline
+
+Progress streams live to a terminal-style log panel. Inaccessible pages are skipped gracefully. Manual paste is always available as fallback.
+
+### 2. Critic-Reviser Agent
+After generation, every output runs through a two-agent refinement loop:
+
+- **Critic** scores on 5 dimensions: hook strength, audience fit, brand voice, claim grounding, format compliance — with specific line citations
+- **Reviser** rewrites only the weak sections — doesn't touch what's working, doesn't add new claims
+- Stops early if first-pass score ≥ 8/10; otherwise runs a second iteration
+- UI shows score badges, before/after toggle with highlighted problem lines, and an updated copy button
+
+"Refine All" runs all 5 pipelines in parallel.
+
+---
+
+## Full agent pipeline
 
 ```mermaid
 flowchart TD
     A[Company URL] --> B[Brand Voice Agent]
     B --> B1[Fetch homepage]
-    B1 --> B2[Score & prioritize internal links - LLM]
-    B2 --> B3[Fetch top 6-8 pages in parallel]
-    B3 --> B4[Synthesize brand voice profile - LLM]
+    B1 --> B2[Score & prioritize internal links — LLM]
+    B2 --> B3[Fetch top 6–8 pages in parallel]
+    B3 --> B4[Synthesize brand voice profile — LLM]
     B4 --> C[Brand chunks → in-memory vector store]
 
     D[Milestone input] --> E[RAG retrieval\n3 brand chunks per audience]
     C --> E
-    E --> F[Parallel generation\n5 × claude-sonnet or gpt-4o]
+    E --> F[Parallel generation\n5 × gpt-4o]
     F --> G[5 audience outputs]
 
     G --> H[Critic-Reviser Agent\nper output, on demand]
-    H --> H1[Critic scores on 5 dimensions - LLM]
+    H --> H1[Critic scores on 5 dimensions — LLM]
     H1 --> H2{Score ≥ 8.0?}
     H2 -- Yes --> I[Show scores + strengths\nno rewrite needed]
-    H2 -- No --> H3[Reviser rewrites weak sections - LLM]
-    H3 --> H4[Critic re-scores revised output - LLM]
-    H4 --> J[Final output with before/after view]
+    H2 -- No --> H3[Reviser rewrites weak sections — LLM]
+    H3 --> H4[Critic re-scores revised output — LLM]
+    H4 --> J[Final output with before/after diff]
 ```
 
-## Agentic Features
+---
 
-### Brand Voice Agent
+## The 5 outputs
 
-Rather than asking users to paste brand content manually, BrandVoice can autonomously build a brand voice profile from a URL. The agent:
-
-1. Fetches the homepage and extracts all internal links
-2. Uses an LLM to classify and prioritize links — HIGH (About, Blog, Press, Product), MEDIUM (Careers, Docs), LOW (Login, Contact, Privacy)
-3. Fetches up to 8 pages in parallel using plain `fetch` — no headless browser
-4. Synthesizes a structured brand voice profile: tone descriptors, signature phrases, things the brand avoids, content style, core values, and 8–10 verbatim sentences for the RAG pipeline
-
-Progress streams in real time to a terminal-style log panel. If a page is inaccessible (403, timeout, bot wall), the agent skips it and continues. Manual paste remains available as a fallback at any time.
-
-### Critic-Reviser Agent
-
-After generation, each output can be passed through a two-agent refinement loop:
-
-- **Critic**: Scores the output on 5 dimensions (hook strength, audience fit, brand voice, claim grounding, format compliance), citing specific lines — not generic feedback
-- **Reviser**: Rewrites only the weak sections identified — doesn't touch what's working, doesn't add new claims, doesn't change the format
-- Runs up to 2 iterations; stops early if first-pass score is ≥ 8/10
-- UI shows dimension score badges, before/after toggle with yellow-highlighted problem lines, collapsible issues log, and an updated copy button
-
-"Refine All" runs all 5 pipelines in parallel with a per-card progress indicator.
-
-## The 5 audiences
-
-| Audience | Format | Purpose |
+| Audience | Format | What it optimizes for |
 |---|---|---|
-| **Investor / VC** | LinkedIn post (150–200w) | Signals velocity and capital efficiency to fund readers |
-| **Strategic Partner** | Cold email opening + 3 bullets (150w) | Opens a conversation without sounding like a pitch |
-| **Technical Community** | Twitter/X thread, 5 tweets | Earns credibility with engineers and domain experts |
-| **Top-of-Funnel Talent** | LinkedIn post (150–180w) | Attracts senior hires evaluating their next move |
-| **Press / Journalist** | Pitch paragraph (100–130w) | Gives journalists a story angle, not a press release |
+| **Investor / VC** | LinkedIn post · 150–200w | Velocity, capital efficiency, what this milestone unlocks next |
+| **Strategic Partner** | Cold email + 3 bullets · 150w | Peer-to-peer tone, outcome-focused, soft CTA |
+| **Technical Community** | Twitter/X thread · 5 tweets | What was actually hard, open questions, no PR language |
+| **Top-of-Funnel Talent** | LinkedIn post · 150–180w | The real problem, what they'll build — "We're hiring" as the last line |
+| **Press / Journalist** | Pitch paragraph · 100–130w | Story angle up front, company name in sentence two |
+
+---
 
 ## Setup
 
 ```bash
-git clone <repo>
-cd BrandVoice
+git clone https://github.com/priyalshah07/brandvoice.git
+cd brandvoice
 npm install
 
 cp .env.example .env.local
@@ -83,18 +89,18 @@ npm run dev
 
 ## Environment variables
 
-| Variable | Required | Description |
+| Variable | Required | Notes |
 |---|---|---|
 | `OPENAI_API_KEY` | Yes (for live generation) | From [platform.openai.com/api-keys](https://platform.openai.com/api-keys) |
 
 ## Demo mode
 
-**Works without an API key.** Two demo flows are available:
+**Works without an API key.** Two built-in demo flows:
 
-- **Brand Voice Agent demo**: Enter `demo.meridian.ai` as the URL. The agent simulates its log output with realistic delays, then loads a hardcoded brand profile for the fictional Meridian company.
-- **Critic-Reviser demo**: On the demo outputs page, each "Review & Refine (Demo)" button loads a hardcoded critique result after a short delay. The critiques are real and specific — written for each Meridian demo output, not placeholder text.
+- **Brand Voice Agent**: Enter `demo.meridian.ai` as the URL — simulates the full agent log with realistic delays, then loads a hardcoded brand profile for fictional Meridian AI
+- **Critic-Reviser**: On any demo output card, "Review & Refine (Demo)" loads real critiques written specifically for each Meridian output — not placeholder text
 
-The `/outputs` page also displays demo outputs directly when navigated to without prior generation.
+The `/outputs` page shows demo outputs directly when visited without prior generation.
 
 ## Tech stack
 
@@ -102,13 +108,16 @@ The `/outputs` page also displays demo outputs directly when navigated to withou
 |---|---|
 | Framework | Next.js 14 (App Router) + TypeScript |
 | Styling | Tailwind CSS |
-| AI — generation | OpenAI `gpt-4o` via `openai` SDK |
-| AI — link scoring, synthesis, critique | OpenAI `gpt-4o` |
-| Vector store | In-memory cosine similarity (no external DB) |
+| AI | OpenAI `gpt-4o` via `openai` SDK |
+| Vector store | In-memory cosine similarity — no external DB |
+| Embeddings | Local 512-dim char bigram + word unigram — no embedding API |
 | HTML parsing | `cheerio` |
-| Icons | Lucide React |
 | Streaming | Next.js `ReadableStream` + SSE |
+| Icons | Lucide React |
 
-## Deployment
+## Deploy to Vercel
 
-Deploy to Vercel in one click. Add `OPENAI_API_KEY` in your Vercel project settings. The `vercel.json` is pre-configured.
+1. Push to GitHub
+2. Import the repo at [vercel.com/new](https://vercel.com/new)
+3. Add `OPENAI_API_KEY` in Environment Variables
+4. Deploy — no other configuration needed

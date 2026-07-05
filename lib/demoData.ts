@@ -99,14 +99,14 @@ We're hiring.`,
   },
   {
     audienceId: "press",
-    wordCount: 128,
+    wordCount: 127,
     content: `Most enterprise AI announcements focus on what was built. This one is about what keeps not shipping.
 
-Meridian, an ML deployment startup, announced a $28M Series A led by Benchmark this week, bringing its total funding to $28M. The company's platform now serves 40 enterprise customers — including two Fortune 500 logistics companies — and has reduced the time it takes to move a trained machine learning model into production from six weeks to three days.
+Meridian, an ML deployment platform, closed a $28M Series A led by Benchmark this week. The company now serves 40 enterprise customers — including two Fortune 500 logistics firms — and cuts ML time-to-production from six weeks to three days.
 
-The counterintuitive part: the bottleneck has never been the models themselves. Enterprises have them. They just can't deploy them. Meridian's bet is that the deployment layer — not the training layer — is where the real enterprise AI value gets unlocked or permanently stuck.
+The counterintuitive part: the bottleneck has never been the models themselves. Enterprises have them trained and validated. They just can't ship them. Meridian's bet is that the deployment layer — not the training layer — is where enterprise AI value gets permanently unlocked or stuck.
 
-Suggested angle: Why does it take six weeks to ship a model that took six days to train — and what does that say about where enterprise AI is actually failing?`,
+Suggested angle: Why does it take six weeks to ship a model that took six days to train?`,
   },
 ];
 

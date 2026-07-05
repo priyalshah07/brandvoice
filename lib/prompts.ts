@@ -106,7 +106,7 @@ Content rules:
 - Sentence 1 must set up the counterintuitive insight or broader trend
 - Include what's surprising or counterintuitive about the milestone
 - End with a specific suggested story angle in the last sentence
-- Length: 100–130 words
+- Length: 100–130 words — count carefully, do not exceed 130 under any circumstances
 - No corporate speak, no "we're pleased to announce," no buzzwords
 - Tone: narrative-first, human, confident without being promotional
 
@@ -116,6 +116,6 @@ ${brandContext}`,
 
 ${milestone}
 
-Lead with the counterintuitive angle. Company name in sentence 2. End with a suggested story angle. 100–130 words.`,
+Lead with the counterintuitive angle. Company name in sentence 2. End with a suggested story angle. Strict limit: 100–130 words. Count before submitting.`,
   }),
 };
