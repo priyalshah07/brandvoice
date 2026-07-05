@@ -61,7 +61,11 @@ export default function PublishButton({ audienceId, content, milestone, onToast 
         onClick={() => {
           const subject = getEmailSubject(milestone);
           const mailto = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(content)}`;
-          window.location.href = mailto;
+          const a = document.createElement("a");
+          a.href = mailto;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
           onToast("Opening your email client…", "email");
         }}
       >
