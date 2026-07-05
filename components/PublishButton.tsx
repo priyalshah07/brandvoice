@@ -55,25 +55,19 @@ export default function PublishButton({ audienceId, content, milestone, onToast 
 
   // Email audiences
   if (audienceId === "partner" || audienceId === "press") {
+    const subject = getEmailSubject(milestone);
     return (
-      <button
+      <a
+        href={`mailto:?subject=${encodeURIComponent(subject)}`}
         className={BASE_CLS}
         onClick={async () => {
           await navigator.clipboard.writeText(content);
-          const subject = getEmailSubject(milestone);
-          // Body omitted intentionally — URL-encoded bodies exceed browser mailto limits.
-          // Content is copied to clipboard so user can paste.
-          const a = document.createElement("a");
-          a.href = `mailto:?subject=${encodeURIComponent(subject)}`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
           onToast("Copied to clipboard — paste into your email", "email");
         }}
       >
         <Mail className="w-3 h-3" />
         Open in Email
-      </button>
+      </a>
     );
   }
 
